@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - 'Derevyashkino-ULTRA-ready.zip'
+      - 'Derevyashkino-ULTRA-ready(2).zip'
       - '.github/workflows/build-android.yml'
 
 permissions:
@@ -19,13 +19,13 @@ jobs:
 
       - name: Check project archive
         run: |
-          test -f Derevyashkino-ULTRA-ready.zip
-          unzip -t Derevyashkino-ULTRA-ready.zip
+          test -f 'Derevyashkino-ULTRA-ready(2).zip'
+          unzip -t 'Derevyashkino-ULTRA-ready(2).zip'
 
       - name: Extract Android project
         run: |
           mkdir -p build-src
-          unzip -q Derevyashkino-ULTRA-ready.zip -d build-src
+          unzip -q 'Derevyashkino-ULTRA-ready(2).zip' -d build-src
           test -f build-src/derevyashkino-ultra/settings.gradle
 
       - name: Set up Java
