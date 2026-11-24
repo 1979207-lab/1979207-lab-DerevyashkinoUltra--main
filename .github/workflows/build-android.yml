@@ -1,0 +1,55 @@
+name: Derevyashkino ULTRA APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'Derevyashkino-ULTRA-ready.zip'
+      - '.github/workflows/build-android.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check project archive
+        run: |
+          test -f Derevyashkino-ULTRA-ready.zip
+          unzip -t Derevyashkino-ULTRA-ready.zip
+
+      - name: Extract Android project
+        run: |
+          mkdir -p build-src
+          unzip -q Derevyashkino-ULTRA-ready.zip -d build-src
+          test -f build-src/derevyashkino-ultra/settings.gradle
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Gradle
+        uses: gradle/gradle-build-action@v2
+        with:
+          gradle-version: '8.2'
+
+      - name: Build debug APK
+        working-directory: build-src/derevyashkino-ultra
+        run: |
+          gradle --no-daemon wrapper --gradle-version 8.2
+          chmod +x gradlew
+          ./gradlew --no-daemon clean assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Derevyashkino-ULTRA-debug
+          path: build-src/derevyashkino-ultra/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
