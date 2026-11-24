@@ -47,6 +47,14 @@ jobs:
               s = s.replace(old, new, 1)
           assert "@OptIn(ExperimentalMaterial3Api::class)" in s, "FinanceScreen opt-in patch failed"
           p.write_text(s)
+          p = root / "OrdersScreen.kt"
+          s = p.read_text()
+          old = "@Composable" + nl + "fun OrdersScreen(canEdit: Boolean)"
+          new = "@OptIn(ExperimentalMaterial3Api::class)" + nl + old
+          if old in s:
+              s = s.replace(old, new, 1)
+          assert "@OptIn(ExperimentalMaterial3Api::class)" in s, "OrdersScreen opt-in patch failed"
+          p.write_text(s)
           PY
           tail -n 4 build-src/derevyashkino-ultra/app/src/main/java/com/derevyashkino/app/MainMenu.kt
           grep -n 'OptIn' build-src/derevyashkino-ultra/app/src/main/java/com/derevyashkino/app/FinanceScreen.kt
