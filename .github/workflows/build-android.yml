@@ -33,13 +33,19 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           root = Path("build-src/derevyashkino-ultra/app/src/main/java/com/derevyashkino/app")
+          nl = chr(10)
           p = root / "MainMenu.kt"
           s = p.read_text()
-          s = s.replace("    })\\n}", "    }\\n}")
+          s = s.replace("    })" + nl + "}", "    }" + nl + "}")
+          assert s != p.read_text(), "MainMenu.kt syntax patch did not match"
           p.write_text(s)
           p = root / "FinanceScreen.kt"
           s = p.read_text()
-          s = s.replace("@Composable\\nfun FinanceScreen()", "@OptIn(ExperimentalMaterial3Api::class)\\n@Composable\\nfun FinanceScreen()")
+          old = "@Composable" + nl + "fun FinanceScreen()"
+          new = "@OptIn(ExperimentalMaterial3Api::class)" + nl + old
+          if old in s:
+              s = s.replace(old, new, 1)
+          assert "@OptIn(ExperimentalMaterial3Api::class)" in s, "FinanceScreen opt-in patch failed"
           p.write_text(s)
           PY
           tail -n 4 build-src/derevyashkino-ultra/app/src/main/java/com/derevyashkino/app/MainMenu.kt
