@@ -28,6 +28,23 @@ jobs:
           unzip -q 'Derevyashkino-ULTRA-ready(2).zip' -d build-src
           test -f build-src/derevyashkino-ultra/settings.gradle
 
+      - name: Patch Kotlin compilation errors
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          root = Path("build-src/derevyashkino-ultra/app/src/main/java/com/derevyashkino/app")
+          p = root / "MainMenu.kt"
+          s = p.read_text()
+          s = s.replace("    })\\n}", "    }\\n}")
+          p.write_text(s)
+          p = root / "FinanceScreen.kt"
+          s = p.read_text()
+          s = s.replace("@Composable\\nfun FinanceScreen()", "@OptIn(ExperimentalMaterial3Api::class)\\n@Composable\\nfun FinanceScreen()")
+          p.write_text(s)
+          PY
+          tail -n 4 build-src/derevyashkino-ultra/app/src/main/java/com/derevyashkino/app/MainMenu.kt
+          grep -n 'OptIn' build-src/derevyashkino-ultra/app/src/main/java/com/derevyashkino/app/FinanceScreen.kt
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
