@@ -103,6 +103,13 @@ jobs:
               }
           }
           EOF
+      - name: Enable Material3 experimental APIs
+        working-directory: project/derevyashkino-ultra
+        run: |
+          for file in app/src/main/java/com/derevyashkino/app/FinanceScreen.kt app/src/main/java/com/derevyashkino/app/OrdersScreen.kt; do
+            sed -i '1i@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)' "$file"
+          done
+
       - name: Install Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
