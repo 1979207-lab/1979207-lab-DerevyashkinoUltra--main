@@ -7,6 +7,7 @@ on:
       - ultra-ready-import
     paths:
       - 'Derevyashkino-ULTRA-phase3-source.zip'
+      - 'Derevyashkino-ULTRA-phase3-source (1).zip'
       - '.github/workflows/build.yml'
 
 permissions:
@@ -30,9 +31,11 @@ jobs:
 
       - name: Extract project archive
         run: |
-          test -f Derevyashkino-ULTRA-phase3-source.zip
+          ARCHIVE='Derevyashkino-ULTRA-phase3-source.zip'
+          if [ ! -f "$ARCHIVE" ]; then ARCHIVE='Derevyashkino-ULTRA-phase3-source (1).zip'; fi
+          test -f "$ARCHIVE"
           mkdir project
-          unzip -q Derevyashkino-ULTRA-phase3-source.zip -d project
+          unzip -q "$ARCHIVE" -d project
           test -f project/derevyashkino-ultra/app/build.gradle
           test -f project/derevyashkino-ultra/app/google-services.json
 
