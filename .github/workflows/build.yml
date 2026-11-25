@@ -1,4 +1,4 @@
-name: Build Derevyashkino ULTRA APK
+name: Build Derevyashkino ULTRA APK # phase3 archive upload
 
 on:
   workflow_dispatch:
