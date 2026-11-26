@@ -17,6 +17,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Restore project archive
+        run: |
+          base64 -d '_temp/project-archive.b64' > 'Derevyashkino-ULTRA-ready(2).zip'
       - name: Check project archive
         run: |
           test -f 'Derevyashkino-ULTRA-ready(2).zip'
@@ -27,6 +30,13 @@ jobs:
           mkdir -p build-src
           unzip -q 'Derevyashkino-ULTRA-ready(2).zip' -d build-src
           test -f build-src/derevyashkino-ultra/settings.gradle
+
+      - name: Upload extracted source for inspection
+        uses: actions/upload-artifact@v4
+        with:
+          name: Derevyashkino-source-inspection
+          path: build-src/derevyashkino-ultra/
+          retention-days: 3
 
       - name: Upload extracted source for inspection
         uses: actions/upload-artifact@v4
