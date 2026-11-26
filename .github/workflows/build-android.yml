@@ -42,13 +42,6 @@ jobs:
           path: build-src/derevyashkino-ultra/
           retention-days: 3
 
-      - name: Upload extracted source for inspection
-        uses: actions/upload-artifact@v4
-        with:
-          name: Derevyashkino-source-inspection
-          path: build-src/derevyashkino-ultra/
-          retention-days: 3
-
       - name: Patch Kotlin compilation errors
         run: |
           python3 - <<'PY'
