@@ -17,9 +17,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Restore project archive
-        run: |
-          base64 -d '_temp/project-archive.b64' > 'Derevyashkino-ULTRA-ready(2).zip'
       - name: Check project archive
         run: |
           test -f 'Derevyashkino-ULTRA-ready(2).zip'
@@ -30,6 +27,13 @@ jobs:
           mkdir -p build-src
           unzip -q 'Derevyashkino-ULTRA-ready(2).zip' -d build-src
           test -f build-src/derevyashkino-ultra/settings.gradle
+
+      - name: Apply Derevyashkino 22 source updates
+        run: |
+          cp source-updates/MainMenu.kt build-src/derevyashkino-ultra/app/src/main/java/com/derevyashkino/app/MainMenu.kt
+          cp source-updates/LoginScreen.kt build-src/derevyashkino-ultra/app/src/main/java/com/derevyashkino/app/LoginScreen.kt
+          cp source-updates/MainActivity.kt build-src/derevyashkino-ultra/app/src/main/java/com/derevyashkino/app/MainActivity.kt
+          cp source-updates/AndroidManifest.xml build-src/derevyashkino-ultra/app/src/main/AndroidManifest.xml
 
       - name: Upload extracted source for inspection
         uses: actions/upload-artifact@v4
