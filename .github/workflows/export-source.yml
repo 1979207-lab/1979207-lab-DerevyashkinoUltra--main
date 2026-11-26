@@ -1,0 +1,29 @@
+name: Export Android source for UI update
+on:
+  push:
+    branches:
+      - ui-redesign-work
+    paths:
+      - .github/workflows/export-source.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: write
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract project source
+        run: |
+          set -e
+          unzip -t "Derevyashkino-ULTRA-ready(2).zip"
+          mkdir -p exported
+          unzip -q "Derevyashkino-ULTRA-ready(2).zip" -d exported
+          find exported -maxdepth 4 -type f | head -100
+      - uses: actions/upload-artifact@v4
+        with:
+          name: derevyashkino-source-export
+          path: exported/
+          if-no-files-found: error
+          retention-days: 2
