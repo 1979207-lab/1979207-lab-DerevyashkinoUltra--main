@@ -12,6 +12,7 @@ import com.google.firebase.firestore.ListenerRegistration
 
 private data class ArchivedOrder(val id: String, val client: String, val service: String, val amount: Double, val status: String)
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ArchiveScreen() {
     val db = remember { FirebaseFirestore.getInstance() }
