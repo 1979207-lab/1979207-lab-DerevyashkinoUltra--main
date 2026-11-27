@@ -44,7 +44,15 @@ function drawOrders(){
  if(!$("order-list"))return;
  const q=$("order-search").value.toLowerCase(),st=$("order-status").value,pay=$("order-payment").value;
  const list=ordersCache.filter(o=>(!q||String(o.clientName||o.client||"").toLowerCase().includes(q)||String(o.service||"").toLowerCase().includes(q))&&(st==="Все статусы"||String(o.status||"новый")===st)&&(pay==="Любая оплата"||(pay==="Оплачено"&&isPaid(o))||(pay==="Не оплачено"&&!isPaid(o))));
- $("order-list").innerHTML='<h3>Заказов: '+list.length+'</h3>'+list.map(o=>'<article class="order-row"><b>'+esc(o.clientName||o.client||"Без клиента")+'</b><p>'+esc(o.service||"")+' · '+money(o.amount)+' · '+esc(o.status||"новый")+'</p><p><b>'+(isPaid(o)?"Оплачено":"Не оплачено")+'</b></p>'+(canManage()?'<button data-paid="'+esc(o.id)+'">'+(isPaid(o)?"Снять оплату":"Отметить оплаченным")+'</button><select data-state="'+esc(o.id)+'"><option value="">Изменить статус…</option><option>в работе</option><option>выполнен</option><option>отменён</option></select>':'')+'</article>').join("")||"<p>Заказы не найдены.</p>";
+ $("order-list").innerHTML='<h3>Заказов: '+list.length+'</h3>'+list.map(o=>'<article class="order-row"><b>'+esc(o.clientName||o.client||"Без клиента")+'</b><p>'+esc(o.service||"")+' · '+money(o.amount)+' · '+esc(o.status||"новый")+'</p><p><b>'+(isPaid(o)?"Оплачено":"Не оплачено")+'</b></p>'+(canManage()?'<button data-edit="'+esc(o.id)+'">Изменить заказ</button><button data-paid="'+esc(o.id)+'">'+(isPaid(o)?"Снять оплату":"Отметить оплаченным")+'</button><select data-state="'+esc(o.id)+'"><option value="">Изменить статус…</option><option>новый</option><option>в работе</option><option>выполнен</option><option>отменён</option></select>':'')+'</article>').join("")||"<p>Заказы не найдены.</p>";
+ $("order-list").querySelectorAll("[data-edit]").forEach(b=>b.onclick=async()=>{
+  const o=ordersCache.find(x=>x.id===b.dataset.edit);if(!o)return;
+  const client=window.prompt("Клиент:",o.clientName||o.client||"");if(client===null)return;
+  const service=window.prompt("Изделие / услуга:",o.service||"");if(service===null)return;
+  const amount=window.prompt("Сумма, ₽:",String(o.amount||0));if(amount===null)return;
+  const parsed=Number(amount);if(!Number.isFinite(parsed)||parsed<0){alert("Введите корректную сумму");return}
+  try{await db.collection("orders").doc(o.id).update({clientName:client.trim(),service:service.trim(),amount:parsed});o.clientName=client.trim();o.service=service.trim();o.amount=parsed;drawOrders()}catch(e){alert(e.message)}
+ });
  $("order-list").querySelectorAll("[data-paid]").forEach(b=>b.onclick=async()=>{const o=ordersCache.find(x=>x.id===b.dataset.paid);await db.collection("orders").doc(o.id).update({payment:isPaid(o)?"не оплачено":"оплачено"});o.payment=isPaid(o)?"не оплачено":"оплачено";drawOrders()});
  $("order-list").querySelectorAll("[data-state]").forEach(s=>s.onchange=async()=>{if(!s.value)return;await db.collection("orders").doc(s.dataset.state).update({status:s.value});const o=ordersCache.find(x=>x.id===s.dataset.state);o.status=s.value;drawOrders()});
 }
