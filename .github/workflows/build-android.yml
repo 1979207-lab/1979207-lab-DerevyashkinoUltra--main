@@ -56,6 +56,7 @@ jobs:
           cp app-overrides/MainMenu.kt "$JAVA/MainMenu.kt"
           cp app-overrides/LoginScreen.kt "$JAVA/LoginScreen.kt"
           cp app-overrides/ArchiveScreen.kt "$JAVA/ArchiveScreen.kt"
+          cp app-overrides/ChatScreen.kt "$JAVA/ChatScreen.kt"
           cp app-overrides/OrdersScreen.kt "$JAVA/OrdersScreen.kt"
           cp app-overrides/FinanceScreen.kt "$JAVA/FinanceScreen.kt"
           cat > "$APP/AndroidManifest.xml" <<'EOF'
