@@ -33,7 +33,33 @@ jobs:
           JAVA="$APP/java/com/derevyashkino/app"
           cp app-overrides/MainMenu.kt "$JAVA/MainMenu.kt"
           cp app-overrides/ArchiveScreen.kt "$JAVA/ArchiveScreen.kt"
-          cp app-overrides/AndroidManifest.xml "$APP/AndroidManifest.xml"
+          cat > "$APP/AndroidManifest.xml" <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+              package="com.derevyashkino.app">
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+              <application
+                  android:label="Деревяшкино 22"
+                  android:icon="@mipmap/ic_launcher"
+                  android:roundIcon="@mipmap/ic_launcher_round"
+                  android:allowBackup="true"
+                  android:supportsRtl="true">
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:theme="@android:style/Theme.Material.Light.NoActionBar">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+                  <service android:name=".AppFirebaseMessagingService" android:exported="false">
+                      <intent-filter><action android:name="com.google.firebase.MESSAGING_EVENT" /></intent-filter>
+                  </service>
+              </application>
+          </manifest>
+          EOF
           mkdir -p "$APP/res/mipmap-xxxhdpi"
           base64 -d app-overrides/ic_launcher.png.b64 > "$APP/res/mipmap-xxxhdpi/ic_launcher.png"
           cp "$APP/res/mipmap-xxxhdpi/ic_launcher.png" "$APP/res/mipmap-xxxhdpi/ic_launcher_round.png"
