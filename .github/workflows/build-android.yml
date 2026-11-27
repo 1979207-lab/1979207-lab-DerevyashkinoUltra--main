@@ -23,6 +23,25 @@ jobs:
           mkdir -p build-src
           unzip -q 'Derevyashkino-ULTRA-ready(2).zip' -d build-src
           PROJECT=build-src/derevyashkino-ultra
+          # Prefer a Maven Central mirror to avoid transient HTTP 429 responses.
+          python3 - <<'PY'
+          from pathlib import Path
+          root = Path("build-src/derevyashkino-ultra")
+          for p in root.rglob("*"):
+              if not p.is_file() or p.suffix not in {".gradle", ".kts"}:
+                  continue
+              try:
+                  source = p.read_text()
+              except UnicodeDecodeError:
+                  continue
+              if "mavenCentral()" not in source:
+                  continue
+              if p.name.endswith(".gradle.kts"):
+                  mirror = 'maven { url = uri("https://maven.aliyun.com/repository/central") }; mavenCentral()'
+              else:
+                  mirror = "maven { url 'https://maven.aliyun.com/repository/central' }; mavenCentral()"
+              p.write_text(source.replace("mavenCentral()", mirror))
+          PY
           test -f "$PROJECT/settings.gradle"
           APP="$PROJECT/app/src/main"
           JAVA="$APP/java/com/derevyashkino/app"
