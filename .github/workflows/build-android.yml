@@ -1,10 +1,11 @@
-name: Derevyashkino ULTRA APK
+name: Derevyashkino 22 APK
 
 on:
   workflow_dispatch:
   push:
     paths:
       - 'Derevyashkino-ULTRA-ready(2).zip'
+      - 'app-overrides/**'
       - '.github/workflows/build-android.yml'
 
 permissions:
@@ -22,42 +23,36 @@ jobs:
           test -f 'Derevyashkino-ULTRA-ready(2).zip'
           unzip -t 'Derevyashkino-ULTRA-ready(2).zip'
 
-      - name: Extract Android project
+      - name: Extract Android project and apply UI update
         run: |
           mkdir -p build-src
           unzip -q 'Derevyashkino-ULTRA-ready(2).zip' -d build-src
-          test -f build-src/derevyashkino-ultra/settings.gradle
-
-      - name: Patch Kotlin compilation errors
-        run: |
+          PROJECT=build-src/derevyashkino-ultra
+          test -f "$PROJECT/settings.gradle"
+          APP="$PROJECT/app/src/main"
+          JAVA="$APP/java/com/derevyashkino/app"
+          cp app-overrides/MainMenu.kt "$JAVA/MainMenu.kt"
+          cp app-overrides/ArchiveScreen.kt "$JAVA/ArchiveScreen.kt"
+          cp app-overrides/AndroidManifest.xml "$APP/AndroidManifest.xml"
+          mkdir -p "$APP/res/mipmap-xxxhdpi"
+          base64 -d app-overrides/ic_launcher.png.b64 > "$APP/res/mipmap-xxxhdpi/ic_launcher.png"
+          cp "$APP/res/mipmap-xxxhdpi/ic_launcher.png" "$APP/res/mipmap-xxxhdpi/ic_launcher_round.png"
           python3 - <<'PY'
           from pathlib import Path
           root = Path("build-src/derevyashkino-ultra/app/src/main/java/com/derevyashkino/app")
-          nl = chr(10)
-          p = root / "MainMenu.kt"
-          s = p.read_text()
-          s = s.replace("    })" + nl + "}", "    }" + nl + "}")
-          assert s != p.read_text(), "MainMenu.kt syntax patch did not match"
-          p.write_text(s)
-          p = root / "FinanceScreen.kt"
-          s = p.read_text()
-          old = "@Composable" + nl + "fun FinanceScreen()"
-          new = "@OptIn(ExperimentalMaterial3Api::class)" + nl + old
-          if old in s:
-              s = s.replace(old, new, 1)
-          assert "@OptIn(ExperimentalMaterial3Api::class)" in s, "FinanceScreen opt-in patch failed"
-          p.write_text(s)
-          p = root / "OrdersScreen.kt"
-          s = p.read_text()
-          old = "@Composable" + nl + "fun OrdersScreen(canEdit: Boolean)"
-          new = "@OptIn(ExperimentalMaterial3Api::class)" + nl + old
-          if old in s:
-              s = s.replace(old, new, 1)
-          assert "@OptIn(ExperimentalMaterial3Api::class)" in s, "OrdersScreen opt-in patch failed"
-          p.write_text(s)
+          for name, signature in [
+              ("OrdersScreen.kt", "fun OrdersScreen(canEdit: Boolean)"),
+              ("FinanceScreen.kt", "fun FinanceScreen()"),
+          ]:
+              p = root / name
+              s = p.read_text()
+              if "@OptIn(ExperimentalMaterial3Api::class)" not in s:
+                  s = s.replace("@Composable\n" + signature,
+                                "@OptIn(ExperimentalMaterial3Api::class)\n@Composable\n" + signature, 1)
+              p.write_text(s)
           PY
-          tail -n 4 build-src/derevyashkino-ultra/app/src/main/java/com/derevyashkino/app/MainMenu.kt
-          grep -n 'OptIn' build-src/derevyashkino-ultra/app/src/main/java/com/derevyashkino/app/FinanceScreen.kt
+          grep -q 'Деревяшкино 22' "$APP/AndroidManifest.xml"
+          test -s "$APP/res/mipmap-xxxhdpi/ic_launcher.png"
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -80,7 +75,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Derevyashkino-ULTRA-debug
+          name: Derevyashkino-22-debug
           path: build-src/derevyashkino-ultra/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
