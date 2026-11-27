@@ -17,6 +17,8 @@ fun ArchiveScreen() {
     val db = remember { FirebaseFirestore.getInstance() }
     var rows by remember { mutableStateOf<List<ArchivedOrder>>(emptyList()) }
     var error by remember { mutableStateOf("") }
+    var search by remember { mutableStateOf("") }
+    var statusFilter by remember { mutableStateOf("Все") }
     DisposableEffect(Unit) {
         val listener: ListenerRegistration = db.collection("orders").addSnapshotListener { snapshot, e ->
             if (e != null) error = e.localizedMessage ?: "Не удалось загрузить архив"
@@ -29,13 +31,25 @@ fun ArchiveScreen() {
         }
         onDispose { listener.remove() }
     }
+    val visibleRows = rows.filter { order ->
+        (statusFilter == "Все" || order.status.equals(statusFilter, true)) &&
+            (search.isBlank() || order.client.contains(search, true) || order.service.contains(search, true))
+    }
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Text("Архив заказов", style = MaterialTheme.typography.headlineSmall)
         Text("Выполненные и отменённые заказы", style = MaterialTheme.typography.bodyMedium)
+        OutlinedTextField(search, { search = it }, label = { Text("Поиск по клиенту или изделию") },
+            modifier = Modifier.fillMaxWidth(), singleLine = true)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("Все", "выполнен", "отменён").forEach { state ->
+                FilterChip(selected = statusFilter == state, onClick = { statusFilter = state }, label = { Text(state) })
+            }
+        }
+        Text("Найдено: ${visibleRows.size}", style = MaterialTheme.typography.labelMedium)
         if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error)
-        if (rows.isEmpty()) Text("В архиве пока нет заказов", modifier = Modifier.padding(top = 24.dp))
+        if (visibleRows.isEmpty()) Text("Заказы не найдены", modifier = Modifier.padding(top = 24.dp))
         LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(rows, key = { it.id }) { order ->
+            items(visibleRows, key = { it.id }) { order ->
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(14.dp)) {
                         Text(order.client, style = MaterialTheme.typography.titleMedium)
