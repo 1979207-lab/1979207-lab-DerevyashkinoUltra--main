@@ -6,6 +6,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -60,8 +61,10 @@ private data class MenuItem(val title: String, val symbol: String)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainMenu(user: AppUser, onSignOut: () -> Unit) {
+    val context = LocalContext.current
+    val preferences = remember { context.getSharedPreferences("derevyashkino_ui", android.content.Context.MODE_PRIVATE) }
     var selected by remember { mutableStateOf("Главная") }
-    var dark by remember { mutableStateOf(false) }
+    var dark by remember { mutableStateOf(preferences.getBoolean("dark_theme", false)) }
     var notifications by remember { mutableStateOf(true) }
     var notificationSound by remember { mutableStateOf(true) }
     val owner = user.role == "Владелец"
@@ -124,7 +127,7 @@ fun MainMenu(user: AppUser, onSignOut: () -> Unit) {
                     "Архив" -> ArchiveScreen()
                     "Ещё" -> SettingsPanel(
                         dark = dark,
-                        onDarkChange = { dark = it },
+                        onDarkChange = { dark = it; preferences.edit().putBoolean("dark_theme", it).apply() },
                         notifications = notifications,
                         onNotificationsChange = { notifications = it },
                         sound = notificationSound,
