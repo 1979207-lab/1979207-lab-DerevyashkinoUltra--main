@@ -7,6 +7,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -14,7 +15,9 @@ import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun LoginScreen(onError: (String) -> Unit, externalError: String) {
-    var email by remember { mutableStateOf("") }
+    val context = LocalContext.current
+    val preferences = remember { context.getSharedPreferences("derevyashkino_login", android.content.Context.MODE_PRIVATE) }
+    var email by remember { mutableStateOf(preferences.getString("saved_email", "") ?: "") }
     var password by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     val colors = MaterialTheme.colorScheme
@@ -76,8 +79,12 @@ fun LoginScreen(onError: (String) -> Unit, externalError: String) {
                     shape = RoundedCornerShape(14.dp),
                     onClick = {
                         busy = true
-                        FirebaseAuth.getInstance().signInWithEmailAndPassword(email.trim(), password)
-                            .addOnSuccessListener { busy = false }
+                        val enteredEmail = email.trim()
+                        FirebaseAuth.getInstance().signInWithEmailAndPassword(enteredEmail, password)
+                            .addOnSuccessListener {
+                                preferences.edit().putString("saved_email", enteredEmail).apply()
+                                busy = false
+                            }
                             .addOnFailureListener {
                                 busy = false
                                 onError(it.localizedMessage ?: "Ошибка входа")
