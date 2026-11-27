@@ -31,6 +31,11 @@ jobs:
           test -f "$PROJECT/settings.gradle"
           APP="$PROJECT/app/src/main"
           JAVA="$APP/java/com/derevyashkino/app"
+          echo "=== SOURCE SCREENS FOR PAYMENT AND WEB PARITY ==="
+          for name in OrdersScreen.kt FinanceScreen.kt ClientsScreen.kt ChatScreen.kt Models.kt; do
+            echo "===== $name ====="
+            cat "$JAVA/$name"
+          done
           echo "=== ORIGINAL MAIN MENU FROM ZIP ==="
           find "$PROJECT" -name "MainMenu.kt" -print -exec cat {} +
           find "$PROJECT" -name 'MainMenu.kt' -print -exec cat {} +
