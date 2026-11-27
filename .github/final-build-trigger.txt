@@ -1,1 +1,1 @@
-Final Derevyashkino 22 build. This marker triggers the single release-candidate APK workflow.
+Final Derevyashkino 22 build. Android home screen now matches the published web interface. Build marker updated for this release candidate.
