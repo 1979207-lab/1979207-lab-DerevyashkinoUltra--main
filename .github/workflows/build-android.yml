@@ -2,11 +2,6 @@ name: Derevyashkino 22 APK
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - 'Derevyashkino-ULTRA-ready(2).zip'
-      - 'app-overrides/**'
-      - '.github/workflows/build-android.yml'
 
 permissions:
   contents: read
