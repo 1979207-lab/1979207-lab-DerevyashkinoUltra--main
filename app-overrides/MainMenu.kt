@@ -228,8 +228,7 @@ private fun HomeDashboard(
                 Text("ВАША МАСТЕРСКАЯ", color = Color(0xFFE2C48B),
                     style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(5.dp))
-                Text("Все важное —
-в одном месте.", color = Color.White,
+                Text("Все важное —\\nв одном месте.", color = Color.White,
                     style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(10.dp))
                 Text("$userEmail  ·  $userRole", color = Color.White.copy(alpha = .78f),
