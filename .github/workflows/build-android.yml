@@ -32,7 +32,7 @@ jobs:
           APP="$PROJECT/app/src/main"
           JAVA="$APP/java/com/derevyashkino/app"
           echo "=== ORIGINAL MAIN MENU FROM ZIP ==="
-          find "$PROJECT" -name 'MainMenu.kt' -print -exec sed -n '1,280p' {} ;
+          find "$PROJECT" -name 'MainMenu.kt' -print -exec cat {} +
           cp app-overrides/MainMenu.kt "$JAVA/MainMenu.kt"
           cp app-overrides/LoginScreen.kt "$JAVA/LoginScreen.kt"
           cp app-overrides/ArchiveScreen.kt "$JAVA/ArchiveScreen.kt"
