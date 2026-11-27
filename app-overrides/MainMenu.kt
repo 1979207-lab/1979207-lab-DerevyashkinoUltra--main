@@ -280,6 +280,7 @@ private fun HomeDashboard(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DashboardTile(
     symbol: String, title: String, subtitle: String, color: Color,
