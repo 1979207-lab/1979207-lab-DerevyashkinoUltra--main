@@ -95,7 +95,11 @@ async function renderArchive(){
   const list=snap.docs.map(d=>({id:d.id,...d.data()})).filter(o=>["выполнен","отменён"].includes(String(o.status||"").toLowerCase()));
   const draw=()=>{
    const q=$("archive-search").value.toLowerCase(),state=$("archive-status").value;
-   const visible=list.filter(o=>(state==="Все"||String(o.status||"").toLowerCase()===state)&&String(o.clientName||o.client||"").toLowerCase().includes(q)||state!=="Все"&&String(o.status||"").toLowerCase()===state&&String(o.service||"").toLowerCase().includes(q)||state==="Все"&&String(o.service||"").toLowerCase().includes(q));
+   const visible=list.filter(o=>{
+    const matchesQuery=!q||String(o.clientName||o.client||"").toLowerCase().includes(q)||String(o.service||"").toLowerCase().includes(q);
+    const matchesStatus=state==="Все"||String(o.status||"").toLowerCase()===state;
+    return matchesQuery&&matchesStatus;
+   });
    $("archive-list").innerHTML="<h3>В архиве: "+visible.length+"</h3>"+visible.map(o=>'<article class="order-row"><b>'+esc(o.clientName||o.client||"Без клиента")+'</b><p>'+esc(o.service||"")+' · '+money(o.amount)+'</p><p>'+esc(o.status)+' · '+(isPaid(o)?"Оплачено":"Не оплачено")+'</p>'+(canManage()?'<button data-restore="'+esc(o.id)+'">Вернуть в работу</button>':"")+'</article>').join("")||"<p>Архив пуст.</p>";
    if(canManage())$("archive-list").querySelectorAll("[data-restore]").forEach(btn=>btn.onclick=async()=>{try{await db.collection("orders").doc(btn.dataset.restore).update({status:"в работе"});renderArchive()}catch(e){$("archive-list").textContent=e.message}});
   };
