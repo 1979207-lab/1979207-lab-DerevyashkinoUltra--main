@@ -26,6 +26,7 @@ fun OrdersScreen(canEdit: Boolean) {
     var amount by remember { mutableStateOf("") }
     var statusFilter by remember { mutableStateOf("Все") }
     var paymentFilter by remember { mutableStateOf("Все") }
+    var newOrderPayment by remember { mutableStateOf("не оплачено") }
     var search by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
 
@@ -60,16 +61,21 @@ fun OrdersScreen(canEdit: Boolean) {
             OutlinedTextField(client, { client = it }, label = { Text("Клиент") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(service, { service = it }, label = { Text("Услуга / изделие") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(amount, { amount = it }, label = { Text("Сумма, ₽") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            Text("Оплата при создании заказа", style = MaterialTheme.typography.labelLarge)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(selected = newOrderPayment == "оплачено", onClick = { newOrderPayment = "оплачено" }, label = { Text("Оплачено") })
+                FilterChip(selected = newOrderPayment == "не оплачено", onClick = { newOrderPayment = "не оплачено" }, label = { Text("Не оплачено") })
+            }
             Button(
                 enabled = client.isNotBlank() && service.isNotBlank() && (amount.toDoubleOrNull() ?: 0.0) > 0,
                 onClick = {
                     val data = mapOf(
                         "clientName" to client.trim(), "service" to service.trim(),
                         "amount" to amount.toDouble(), "status" to "новый",
-                        "payment" to "не оплачено", "createdAt" to Date()
+                        "payment" to newOrderPayment, "createdAt" to Date()
                     )
                     db.collection("orders").add(data)
-                        .addOnSuccessListener { client = ""; service = ""; amount = ""; message = "Заказ добавлен" }
+                        .addOnSuccessListener { client = ""; service = ""; amount = ""; newOrderPayment = "не оплачено"; message = "Заказ добавлен" }
                         .addOnFailureListener { message = it.localizedMessage ?: "Не удалось сохранить заказ" }
                 },
                 modifier = Modifier.fillMaxWidth()
