@@ -80,6 +80,10 @@ jobs:
           PY
           grep -q 'Деревяшкино 22' "$APP/AndroidManifest.xml"
           test -s "$APP/res/mipmap-xxxhdpi/ic_launcher.png"
+          echo "=== MAIN ACTIVITY ==="
+          sed -n '1,240p' "$JAVA/MainActivity.kt"
+          echo "=== USER MODEL DEFINITIONS ==="
+          grep -R -n -B 4 -A 18 -E 'data class AppUser|class AppUser|fun AppRoot|fun OrdersScreen|fun ClientsScreen|fun ChatScreen' "$JAVA" || true
 
       - name: Set up Java
         uses: actions/setup-java@v4
