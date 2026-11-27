@@ -32,6 +32,7 @@ jobs:
           APP="$PROJECT/app/src/main"
           JAVA="$APP/java/com/derevyashkino/app"
           cp app-overrides/MainMenu.kt "$JAVA/MainMenu.kt"
+          cp app-overrides/LoginScreen.kt "$JAVA/LoginScreen.kt"
           cp app-overrides/ArchiveScreen.kt "$JAVA/ArchiveScreen.kt"
           cat > "$APP/AndroidManifest.xml" <<'EOF'
           <?xml version="1.0" encoding="utf-8"?>
