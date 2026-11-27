@@ -1,1 +1,1 @@
-Final Derevyashkino 22 build. Android home screen now matches the published web interface. Build marker updated for this release candidate.
+Final Derevyashkino 22 Android build trigger. Kotlin string syntax fix applied to the matching web UI redesign.
