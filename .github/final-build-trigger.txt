@@ -1,1 +1,1 @@
-Final Derevyashkino 22 Android build trigger. Kotlin string syntax fix applied to the matching web UI redesign.
+Final Derevyashkino 22 Android build trigger. Fixed Kotlin string and Material3 Card opt-in for mobile UI redesign.
