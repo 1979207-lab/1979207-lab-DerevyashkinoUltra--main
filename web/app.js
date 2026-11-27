@@ -1,33 +1,42 @@
 const $=id=>document.getElementById(id);
-let auth=null,db=null,user=null,currentPage="home",ordersCache=[],transactionsCache=[];
+let auth=null,db=null,user=null,userRole="Сотрудник",currentPage="home",ordersCache=[],transactionsCache=[];
+const canManage=()=>userRole==="Владелец"||userRole==="Админ";
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const money=n=>(Number(n)||0).toLocaleString("ru-RU",{minimumFractionDigits:2,maximumFractionDigits:2})+" ₽";
 if(window.firebaseConfig&&window.firebaseConfig.apiKey&&window.firebaseConfig.apiKey!=="PASTE_WEB_API_KEY"){
  firebase.initializeApp(window.firebaseConfig);auth=firebase.auth();db=firebase.firestore();
- auth.onAuthStateChanged(u=>{user=u;$("logout").hidden=!u;$("login").hidden=!!u;$("email").hidden=!!u;$("password").hidden=!!u;$("status").textContent=u?"Вы вошли как "+u.email+".":"Войдите в аккаунт.";renderPage();});
+ auth.onAuthStateChanged(async u=>{
+ user=u;userRole="Сотрудник";
+ if(u){try{const profile=await db.collection("users").doc(u.uid).get();userRole=profile.exists?(profile.get("role")||"Сотрудник"):"Сотрудник";}catch(e){$("status").textContent="Не удалось загрузить профиль: "+e.message;}}
+ $("logout").hidden=!u;$("login").hidden=!!u;$("email").hidden=!!u;$("password").hidden=!!u;
+ const emailInput=$("email");if(!u&&emailInput&&!emailInput.value){try{emailInput.value=localStorage.getItem("d22-email")||""}catch(_){}}
+ document.querySelector('[data-page="finance"]').hidden=!!u&&!canManage();
+ $("status").textContent=u?"Вы вошли как "+u.email+" · "+userRole+".":"Войдите в аккаунт.";
+ renderPage();
+});
 }
-$("login").onclick=()=>{if(!auth){$("status").textContent="Сначала настройте web/firebase-config.js по примеру.";return}auth.signInWithEmailAndPassword($("email").value.trim(),$("password").value).catch(e=>$("status").textContent=e.message)};
+$("login").onclick=()=>{if(!auth){$("status").textContent="Сначала настройте web/firebase-config.js по примеру.";return}const entered=$("email").value.trim();auth.signInWithEmailAndPassword(entered,$("password").value).then(()=>{try{localStorage.setItem("d22-email",entered)}catch(_){}}).catch(e=>$("status").textContent=e.message)};
 $("logout").onclick=()=>auth&&auth.signOut();
-function page(name){currentPage=name;document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===name));renderPage()}
+function page(name){if(name==="finance"&&!canManage()){currentPage="home";renderPage();return}currentPage=name;document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===name));renderPage()}
 function shell(title,subtitle=""){return '<div class="hero"><p class="eyebrow">ДЕРЕВЯШКИНО 22</p><h1>'+esc(title)+'</h1><p>'+esc(subtitle)+'</p></div>'}
 function renderPage(){
  const titles={home:"Главная",orders:"Заказы",clients:"Клиенты",finance:"Финансы",chat:"Чат",archive:"Архив",settings:"Настройки"};
  if(!user){$("content").innerHTML=shell("Деревяшкино 22","Войдите, чтобы работать с заказами и данными мастерской.");return}
  if(currentPage==="orders")return renderOrders();
- if(currentPage==="finance")return renderFinance();
+ if(currentPage==="finance")return canManage()?renderFinance():page("home");
  if(currentPage==="clients")return renderClients();
  if(currentPage==="archive")return renderArchive();
  if(currentPage==="chat")return renderChat();
  if(currentPage==="settings")return renderSettings();
- if(currentPage==="home"){$("content").innerHTML=shell("Деревяшкино 22","Рабочий стол мастерской")+'<div class="tiles"><button data-go="orders">Заказы →</button><button data-go="clients">Клиенты →</button><button data-go="finance">Финансы →</button><button data-go="chat">Чат →</button><button data-go="archive">Архив →</button></div>';return}
+ if(currentPage==="home"){$("content").innerHTML=shell("Деревяшкино 22","Рабочий стол мастерской")+'<div class="tiles"><button data-go="orders">Заказы →</button><button data-go="clients">Клиенты →</button>'+(canManage()?'<button data-go="finance">Финансы →</button>':'')+'<button data-go="chat">Чат →</button><button data-go="archive">Архив →</button></div>';return}
  $("content").innerHTML=shell(titles[currentPage],"");
 }
 async function renderOrders(){
  $("content").innerHTML=shell("Заказы","Создание, поиск, статусы и отметка оплаты.")+
- '<div class="notice"><h3>Новый заказ</h3><form id="new-order"><input id="order-client" placeholder="Клиент" required><input id="order-service" placeholder="Услуга / изделие" required><input id="order-amount" type="number" min="0.01" step="0.01" placeholder="Сумма, ₽" required><label for="order-payment-new">Оплата</label><select id="order-payment-new"><option value="не оплачено">Не оплачено</option><option value="оплачено">Оплачено</option></select><button>Добавить заказ</button></form></div>'+
+ (canManage()?'<div class="notice"><h3>Новый заказ</h3><form id="new-order"><input id="order-client" placeholder="Клиент" required><input id="order-service" placeholder="Услуга / изделие" required><input id="order-amount" type="number" min="0.01" step="0.01" placeholder="Сумма, ₽" required><label for="order-payment-new">Оплата</label><select id="order-payment-new"><option value="не оплачено">Не оплачено</option><option value="оплачено">Оплачено</option></select><button>Добавить заказ</button></form></div>'+
  '<div class="notice"><input id="order-search" placeholder="Поиск по клиенту или изделию"><select id="order-status"><option>Все статусы</option><option>новый</option><option>в работе</option><option>выполнен</option><option>отменён</option></select><select id="order-payment"><option>Любая оплата</option><option>Оплачено</option><option>Не оплачено</option></select><div id="order-list">Загрузка…</div></div>';
  try{const snap=await db.collection("orders").get();ordersCache=snap.docs.map(d=>({id:d.id,...d.data()}));drawOrders()}catch(e){$("order-list").textContent=e.message}
- $("new-order").onsubmit=async e=>{e.preventDefault();try{await db.collection("orders").add({clientName:$("order-client").value.trim(),service:$("order-service").value.trim(),amount:Number($("order-amount").value),status:"новый",payment:$("order-payment-new").value,createdAt:firebase.firestore.FieldValue.serverTimestamp()});renderOrders()}catch(err){$("order-list").textContent=err.message}};
+ if($("new-order"))$("new-order").onsubmit=async e=>{e.preventDefault();try{await db.collection("orders").add({clientName:$("order-client").value.trim(),service:$("order-service").value.trim(),amount:Number($("order-amount").value),status:"новый",payment:$("order-payment-new").value,createdAt:firebase.firestore.FieldValue.serverTimestamp()});renderOrders()}catch(err){$("order-list").textContent=err.message}};
  ["order-search","order-status","order-payment"].forEach(id=>$(id).addEventListener("input",drawOrders));
 }
 function isPaid(o){return String(o.payment||"").toLowerCase()==="оплачено"||o.paid===true}
@@ -35,7 +44,7 @@ function drawOrders(){
  if(!$("order-list"))return;
  const q=$("order-search").value.toLowerCase(),st=$("order-status").value,pay=$("order-payment").value;
  const list=ordersCache.filter(o=>(!q||String(o.clientName||o.client||"").toLowerCase().includes(q)||String(o.service||"").toLowerCase().includes(q))&&(st==="Все статусы"||String(o.status||"новый")===st)&&(pay==="Любая оплата"||(pay==="Оплачено"&&isPaid(o))||(pay==="Не оплачено"&&!isPaid(o))));
- $("order-list").innerHTML='<h3>Заказов: '+list.length+'</h3>'+list.map(o=>'<article class="order-row"><b>'+esc(o.clientName||o.client||"Без клиента")+'</b><p>'+esc(o.service||"")+' · '+money(o.amount)+' · '+esc(o.status||"новый")+'</p><p><b>'+ (isPaid(o)?"Оплачено":"Не оплачено")+'</b></p><button data-paid="'+esc(o.id)+'">'+(isPaid(o)?"Снять оплату":"Отметить оплаченным")+'</button><select data-state="'+esc(o.id)+'"><option value="">Изменить статус…</option><option>в работе</option><option>выполнен</option><option>отменён</option></select></article>').join("")||"<p>Заказы не найдены.</p>";
+ $("order-list").innerHTML='<h3>Заказов: '+list.length+'</h3>'+list.map(o=>'<article class="order-row"><b>'+esc(o.clientName||o.client||"Без клиента")+'</b><p>'+esc(o.service||"")+' · '+money(o.amount)+' · '+esc(o.status||"новый")+'</p><p><b>'+(isPaid(o)?"Оплачено":"Не оплачено")+'</b></p>'+(canManage()?'<button data-paid="'+esc(o.id)+'">'+(isPaid(o)?"Снять оплату":"Отметить оплаченным")+'</button><select data-state="'+esc(o.id)+'"><option value="">Изменить статус…</option><option>в работе</option><option>выполнен</option><option>отменён</option></select>':'')+'</article>').join("")||"<p>Заказы не найдены.</p>";
  $("order-list").querySelectorAll("[data-paid]").forEach(b=>b.onclick=async()=>{const o=ordersCache.find(x=>x.id===b.dataset.paid);await db.collection("orders").doc(o.id).update({payment:isPaid(o)?"не оплачено":"оплачено"});o.payment=isPaid(o)?"не оплачено":"оплачено";drawOrders()});
  $("order-list").querySelectorAll("[data-state]").forEach(s=>s.onchange=async()=>{if(!s.value)return;await db.collection("orders").doc(s.dataset.state).update({status:s.value});const o=ordersCache.find(x=>x.id===s.dataset.state);o.status=s.value;drawOrders()});
 }
@@ -54,11 +63,11 @@ async function renderFinance(){
 
 async function renderClients(){
  $("content").innerHTML=shell("Клиенты","Контакты и история заказов.")+
- '<div class="notice"><h3>Новый клиент</h3><form id="new-client"><input id="client-name" placeholder="Имя клиента" required><input id="client-phone" placeholder="Телефон"><input id="client-email" type="email" placeholder="Email"><button>Сохранить клиента</button></form></div><div class="notice"><input id="client-search" placeholder="Поиск клиента"><div id="client-list">Загрузка…</div></div>';
+ (canManage()?'<div class="notice"><h3>Новый клиент</h3><form id="new-client"><input id="client-name" placeholder="Имя клиента" required><input id="client-phone" placeholder="Телефон"><input id="client-email" type="email" placeholder="Email"><button>Сохранить клиента</button></form></div>':"")+'<div class="notice"><input id="client-search" placeholder="Поиск клиента"><div id="client-list">Загрузка…</div></div>';
  let clients=[];try{const snap=await db.collection("clients").get();clients=snap.docs.map(d=>({id:d.id,...d.data()}));}catch(e){$("client-list").textContent=e.message;return}
  const draw=()=>{const q=$("client-search").value.toLowerCase();const list=clients.filter(x=>(x.name||x.clientName||"").toLowerCase().includes(q)||(x.phone||"").toLowerCase().includes(q));$("client-list").innerHTML=list.map(x=>'<article class="order-row"><b>'+esc(x.name||x.clientName||"Без имени")+'</b><p>'+esc(x.phone||"")+' · '+esc(x.email||"")+'</p><p>Заказы: '+ordersCache.filter(o=>(o.clientName||o.client||"").toLowerCase()===(x.name||x.clientName||"").toLowerCase()).length+'</p></article>').join("")||"<p>Клиенты не найдены.</p>"};
  draw();$("client-search").oninput=draw;
- $("new-client").onsubmit=async e=>{e.preventDefault();try{const data={name:$("client-name").value.trim(),phone:$("client-phone").value.trim(),email:$("client-email").value.trim(),createdAt:firebase.firestore.FieldValue.serverTimestamp()};const d=await db.collection("clients").add(data);clients.unshift({id:d.id,...data});e.target.reset();draw()}catch(err){$("client-list").textContent=err.message}};
+ if($("new-client"))$("new-client").onsubmit=async e=>{e.preventDefault();try{const data={name:$("client-name").value.trim(),phone:$("client-phone").value.trim(),email:$("client-email").value.trim(),createdAt:firebase.firestore.FieldValue.serverTimestamp()};const d=await db.collection("clients").add(data);clients.unshift({id:d.id,...data});e.target.reset();draw()}catch(err){$("client-list").textContent=err.message}};
 }
 async function renderArchive(){
  $("content").innerHTML=shell("Архив заказов","Выполненные и отменённые заказы.")+'<div class="notice"><input id="archive-search" placeholder="Поиск по архиву"><div id="archive-list">Загрузка…</div></div>';
