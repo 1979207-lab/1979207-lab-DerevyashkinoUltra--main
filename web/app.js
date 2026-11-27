@@ -1,12 +1,12 @@
 const $=id=>document.getElementById(id);
-let auth=null,db=null,user=null,userRole="Сотрудник",currentPage="home",ordersCache=[],transactionsCache=[];
+let auth=null,db=null,user=null,userRole="Сотрудник",currentPage="home",ordersCache=[],transactionsCache=[],chatUnsub=null;
 const canManage=()=>userRole==="Владелец"||userRole==="Админ";
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const money=n=>(Number(n)||0).toLocaleString("ru-RU",{minimumFractionDigits:2,maximumFractionDigits:2})+" ₽";
 if(window.firebaseConfig&&window.firebaseConfig.apiKey&&window.firebaseConfig.apiKey!=="PASTE_WEB_API_KEY"){
  firebase.initializeApp(window.firebaseConfig);auth=firebase.auth();db=firebase.firestore();
  auth.onAuthStateChanged(async u=>{
- user=u;userRole="Сотрудник";
+ user=u;if(!u&&chatUnsub){chatUnsub();chatUnsub=null;}userRole="Сотрудник";
  if(u){try{const profile=await db.collection("users").doc(u.uid).get();userRole=profile.exists?(profile.get("role")||"Сотрудник"):"Сотрудник";}catch(e){$("status").textContent="Не удалось загрузить профиль: "+e.message;}}
  $("logout").hidden=!u;$("login").hidden=!!u;$("email").hidden=!!u;$("password").hidden=!!u;
  const emailInput=$("email");if(!u&&emailInput&&!emailInput.value){try{emailInput.value=localStorage.getItem("d22-email")||""}catch(_){}}
@@ -17,7 +17,7 @@ if(window.firebaseConfig&&window.firebaseConfig.apiKey&&window.firebaseConfig.ap
 }
 $("login").onclick=()=>{if(!auth){$("status").textContent="Сначала настройте web/firebase-config.js по примеру.";return}const entered=$("email").value.trim();auth.signInWithEmailAndPassword(entered,$("password").value).then(()=>{try{localStorage.setItem("d22-email",entered)}catch(_){}}).catch(e=>$("status").textContent=e.message)};
 $("logout").onclick=()=>auth&&auth.signOut();
-function page(name){if(name==="finance"&&!canManage()){currentPage="home";renderPage();return}currentPage=name;document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===name));renderPage()}
+function page(name){if(currentPage==="chat"&&name!=="chat"&&chatUnsub){chatUnsub();chatUnsub=null;}if(name==="finance"&&!canManage()){currentPage="home";renderPage();return}currentPage=name;document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===name));renderPage()}
 function shell(title,subtitle=""){return '<div class="hero"><p class="eyebrow">ДЕРЕВЯШКИНО 22</p><h1>'+esc(title)+'</h1><p>'+esc(subtitle)+'</p></div>'}
 function renderPage(){
  const titles={home:"Главная",orders:"Заказы",clients:"Клиенты",finance:"Финансы",chat:"Чат",archive:"Архив",settings:"Настройки"};
@@ -89,15 +89,25 @@ async function renderClients(){
  if($("new-client"))$("new-client").onsubmit=async e=>{e.preventDefault();try{const data={name:$("client-name").value.trim(),phone:$("client-phone").value.trim(),email:$("client-email").value.trim(),createdAt:firebase.firestore.FieldValue.serverTimestamp()};const d=await db.collection("clients").add(data);clients.unshift({id:d.id,...data});e.target.reset();draw()}catch(err){$("client-list").textContent=err.message}};
 }
 async function renderArchive(){
- $("content").innerHTML=shell("Архив заказов","Выполненные и отменённые заказы.")+'<div class="notice"><input id="archive-search" placeholder="Поиск по архиву"><div id="archive-list">Загрузка…</div></div>';
- try{const snap=await db.collection("orders").get();const list=snap.docs.map(d=>({id:d.id,...d.data()})).filter(o=>["выполнен","отменён"].includes(String(o.status||"").toLowerCase()));const draw=()=>{const q=$("archive-search").value.toLowerCase();const a=list.filter(o=>(o.clientName||o.client||"").toLowerCase().includes(q)||(o.service||"").toLowerCase().includes(q));$("archive-list").innerHTML="<h3>В архиве: "+a.length+"</h3>"+a.map(o=>'<article class="order-row"><b>'+esc(o.clientName||o.client||"Без клиента")+'</b><p>'+esc(o.service||"")+' · '+money(o.amount)+'</p><p>'+esc(o.status)+' · '+(isPaid(o)?"Оплачено":"Не оплачено")+'</p><button data-restore="'+esc(o.id)+'">Вернуть в работу</button></article>').join("")||"<p>Архив пуст.</p>";$("archive-list").querySelectorAll("[data-restore]").forEach(b=>b.onclick=async()=>{await db.collection("orders").doc(b.dataset.restore).update({status:"в работе"});renderArchive()})};draw();$("archive-search").oninput=draw}catch(e){$("archive-list").textContent=e.message}
+ $("content").innerHTML=shell("Архив заказов","Выполненные и отменённые заказы.")+'<div class="notice"><input id="archive-search" placeholder="Поиск по архиву"><select id="archive-status"><option value="Все">Все статусы</option><option value="выполнен">Выполнен</option><option value="отменён">Отменён</option></select><div id="archive-list">Загрузка…</div></div>';
+ try{
+  const snap=await db.collection("orders").get();
+  const list=snap.docs.map(d=>({id:d.id,...d.data()})).filter(o=>["выполнен","отменён"].includes(String(o.status||"").toLowerCase()));
+  const draw=()=>{
+   const q=$("archive-search").value.toLowerCase(),state=$("archive-status").value;
+   const visible=list.filter(o=>(state==="Все"||String(o.status||"").toLowerCase()===state)&&String(o.clientName||o.client||"").toLowerCase().includes(q)||state!=="Все"&&String(o.status||"").toLowerCase()===state&&String(o.service||"").toLowerCase().includes(q)||state==="Все"&&String(o.service||"").toLowerCase().includes(q));
+   $("archive-list").innerHTML="<h3>В архиве: "+visible.length+"</h3>"+visible.map(o=>'<article class="order-row"><b>'+esc(o.clientName||o.client||"Без клиента")+'</b><p>'+esc(o.service||"")+' · '+money(o.amount)+'</p><p>'+esc(o.status)+' · '+(isPaid(o)?"Оплачено":"Не оплачено")+'</p>'+(canManage()?'<button data-restore="'+esc(o.id)+'">Вернуть в работу</button>':"")+'</article>').join("")||"<p>Архив пуст.</p>";
+   if(canManage())$("archive-list").querySelectorAll("[data-restore]").forEach(btn=>btn.onclick=async()=>{try{await db.collection("orders").doc(btn.dataset.restore).update({status:"в работе"});renderArchive()}catch(e){$("archive-list").textContent=e.message}});
+  };
+  draw();$("archive-search").oninput=draw;$("archive-status").onchange=draw;
+ }catch(e){$("archive-list").textContent=e.message}
 }
 async function renderChat(){
  $("content").innerHTML=shell("Общий чат","Сообщения и вложения доступны участникам приложения.")+'<div class="notice"><div id="chat-list">Загрузка…</div><form id="chat-send"><input id="chat-text" placeholder="Напишите сообщение"><input id="chat-file" type="file" accept="image/*,video/*"><button>Отправить</button></form><p id="chat-error"></p></div>';
  const draw=snap=>{$("chat-list").innerHTML=snap.docs.map(d=>{const m=d.data();return '<article class="order-row"><b>'+esc(m.senderEmail||"Сотрудник")+'</b><p>'+esc(m.text||"")+'</p>'+(m.mediaUrl? (m.type==="video"?'<video controls src="'+esc(m.mediaUrl)+'" style="max-width:100%"></video>':'<a target="_blank" rel="noopener" href="'+esc(m.mediaUrl)+'"><img src="'+esc(m.mediaUrl)+'" alt="Вложение" style="max-width:220px;border-radius:12px"></a>'):"")+'</article>'}).join("")||"<p>Пока нет сообщений.</p>"};
- const unsub=db.collection("chat").orderBy("createdAt").onSnapshot(draw,e=>$("chat-error").textContent=e.message);
+ if(chatUnsub){chatUnsub();chatUnsub=null;}chatUnsub=db.collection("chat").orderBy("createdAt").onSnapshot(draw,e=>$("chat-error").textContent=e.message);
  $("chat-send").onsubmit=async e=>{e.preventDefault();const msg=$("chat-text").value.trim(),file=$("chat-file").files[0];if(!msg&&!file)return;const btn=e.submitter;btn.disabled=true;try{let mediaUrl="",type="text";if(file){if(!firebase.storage)throw new Error("Firebase Storage не подключён.");type=file.type.startsWith("video/")?"video":"image";const ref=firebase.storage().ref().child("chat/"+user.uid+"/"+Date.now()+"_"+file.name);await ref.put(file);mediaUrl=await ref.getDownloadURL()}await db.collection("chat").add({text:msg,type,mediaUrl,senderUid:user.uid,senderEmail:user.email,createdAt:firebase.firestore.FieldValue.serverTimestamp()});e.target.reset()}catch(err){$("chat-error").textContent=err.message}finally{btn.disabled=false}};
- window.addEventListener("beforeunload",()=>unsub(),{once:true});
+
 }
 function renderSettings(){
  $("content").innerHTML=shell("Настройки","Параметры веб-интерфейса.")+'<div class="notice"><label><input type="checkbox" id="dark-mode" style="min-width:0"> Тёмная тема</label><p>Аккаунт: '+esc(user.email)+'</p><p>Данные хранятся в Firebase проекта Деревяшкино.</p><button id="settings-exit">Выйти из аккаунта</button></div>';
