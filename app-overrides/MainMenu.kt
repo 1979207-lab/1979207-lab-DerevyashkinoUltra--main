@@ -5,6 +5,50 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+
+@Composable
+fun AppRoot() {
+    val auth = remember { FirebaseAuth.getInstance() }
+    var firebaseUser by remember { mutableStateOf(auth.currentUser) }
+    var appUser by remember { mutableStateOf<AppUser?>(null) }
+    var error by remember { mutableStateOf("") }
+
+    DisposableEffect(auth) {
+        val listener = FirebaseAuth.AuthStateListener { firebaseUser = it.currentUser }
+        auth.addAuthStateListener(listener)
+        onDispose { auth.removeAuthStateListener(listener) }
+    }
+
+    LaunchedEffect(firebaseUser?.uid) {
+        val current = firebaseUser
+        appUser = null
+        if (current != null) {
+            FirebaseFirestore.getInstance().collection("users").document(current.uid).get()
+                .addOnSuccessListener { document ->
+                    val role = document.getString("role") ?: "Сотрудник"
+                    appUser = AppUser(current.uid, current.email ?: "", role)
+                }
+                .addOnFailureListener {
+                    error = it.localizedMessage ?: "Не удалось загрузить профиль"
+                }
+        }
+    }
+
+    MaterialTheme {
+        when {
+            firebaseUser == null -> LoginScreen(onError = { error = it }, externalError = error)
+            appUser != null -> MainMenu(user = appUser!!, onSignOut = {
+                auth.signOut()
+                error = ""
+            })
+            else -> Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+                if (error.isNotBlank()) Text(error) else CircularProgressIndicator()
+            }
+        }
+    }
+}
 
 private data class MenuItem(val title: String, val symbol: String)
 
