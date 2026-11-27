@@ -63,9 +63,20 @@ async function renderFinance(){
 
 async function renderClients(){
  $("content").innerHTML=shell("Клиенты","Контакты и история заказов.")+
- (canManage()?'<div class="notice"><h3>Новый клиент</h3><form id="new-client"><input id="client-name" placeholder="Имя клиента" required><input id="client-phone" placeholder="Телефон"><input id="client-email" type="email" placeholder="Email"><button>Сохранить клиента</button></form></div>':"")+'<div class="notice"><input id="client-search" placeholder="Поиск клиента"><div id="client-list">Загрузка…</div></div>';
- let clients=[];try{const snap=await db.collection("clients").get();clients=snap.docs.map(d=>({id:d.id,...d.data()}));}catch(e){$("client-list").textContent=e.message;return}
- const draw=()=>{const q=$("client-search").value.toLowerCase();const list=clients.filter(x=>(x.name||x.clientName||"").toLowerCase().includes(q)||(x.phone||"").toLowerCase().includes(q));$("client-list").innerHTML=list.map(x=>'<article class="order-row"><b>'+esc(x.name||x.clientName||"Без имени")+'</b><p>'+esc(x.phone||"")+' · '+esc(x.email||"")+'</p><p>Заказы: '+ordersCache.filter(o=>(o.clientName||o.client||"").toLowerCase()===(x.name||x.clientName||"").toLowerCase()).length+'</p></article>').join("")||"<p>Клиенты не найдены.</p>"};
+ (canManage()?'<div class="notice"><h3>Новый клиент</h3><form id="new-client"><input id="client-name" placeholder="Имя клиента" required><input id="client-phone" placeholder="Телефон"><input id="client-email" type="email" placeholder="Email"><button>Сохранить клиента</button></form></div>':"")+
+ '<div class="notice"><input id="client-search" placeholder="Поиск клиента"><div id="client-list">Загрузка…</div></div>';
+ let clients=[],clientOrders=[];
+ try{const [cs,os]=await Promise.all([db.collection("clients").get(),db.collection("orders").get()]);clients=cs.docs.map(d=>({id:d.id,...d.data()}));clientOrders=os.docs.map(d=>({id:d.id,...d.data()}));ordersCache=clientOrders;}
+ catch(e){$("client-list").textContent=e.message;return}
+ const draw=()=>{
+  const q=$("client-search").value.toLowerCase();
+  const list=clients.filter(x=>String(x.name||x.clientName||"").toLowerCase().includes(q)||String(x.phone||"").toLowerCase().includes(q)||String(x.email||"").toLowerCase().includes(q));
+  $("client-list").innerHTML=list.map(x=>{
+   const name=String(x.name||x.clientName||"Без имени");
+   const history=clientOrders.filter(o=>String(o.clientName||o.client||"").toLowerCase()===name.toLowerCase());
+   return '<article class="order-row"><b>'+esc(name)+'</b><p>'+esc(x.phone||"")+' · '+esc(x.email||"")+'</p><p>Заказов: '+history.length+'</p>'+history.slice().sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)).map(o=>'<p>• '+esc(o.service||"Заказ")+' — '+money(o.amount)+' · '+esc(o.status||"новый")+' · '+(isPaid(o)?"Оплачено":"Не оплачено")+'</p>').join("")+'</article>';
+  }).join("")||"<p>Клиенты не найдены.</p>";
+ };
  draw();$("client-search").oninput=draw;
  if($("new-client"))$("new-client").onsubmit=async e=>{e.preventDefault();try{const data={name:$("client-name").value.trim(),phone:$("client-phone").value.trim(),email:$("client-email").value.trim(),createdAt:firebase.firestore.FieldValue.serverTimestamp()};const d=await db.collection("clients").add(data);clients.unshift({id:d.id,...data});e.target.reset();draw()}catch(err){$("client-list").textContent=err.message}};
 }
