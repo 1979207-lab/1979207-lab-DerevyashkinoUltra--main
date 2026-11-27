@@ -72,6 +72,7 @@ fun MainMenu(user: AppUser, onSignOut: () -> Unit) {
         add(MenuItem("Клиенты", "♟"))
         if (canSeeFinance) add(MenuItem("Финансы", "▥"))
         add(MenuItem("Чат", "▰"))
+        add(MenuItem("Архив", "▤"))
         add(MenuItem("Ещё", "•••"))
     }
 
@@ -120,6 +121,7 @@ fun MainMenu(user: AppUser, onSignOut: () -> Unit) {
                     "Клиенты" -> ClientsScreen(canEdit = owner || admin)
                     "Финансы" -> if (canSeeFinance) FinanceScreen()
                     "Чат" -> ChatScreen(user)
+                    "Архив" -> ArchiveScreen()
                     "Ещё" -> SettingsPanel(
                         dark = dark,
                         onDarkChange = { dark = it },
@@ -162,6 +164,7 @@ private fun HomeDashboard(
         HomeAction("♟", "Клиенты", green) { onOpen("Клиенты") }
         if (canSeeFinance) HomeAction("▥", "Финансы", purple) { onOpen("Финансы") }
         HomeAction("▰", "Чат", cyan) { onOpen("Чат") }
+        HomeAction("▤", "Архив", Color(0xFF526B78)) { onOpen("Архив") }
         Spacer(Modifier.weight(1f))
         OutlinedButton(
             onClick = onSettings,
